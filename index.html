@@ -1,0 +1,275 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3MR EMPIRE | V23 FINAL</title>
+    <style>
+        :root { --red: #ce1126; --black: #000; --gold: #D4AF37; --fb-blue: #1877F2; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #050505; color: white; overflow: hidden; }
+        
+        /* الهيدر والتابات */
+        .header { background: var(--black); padding: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--red); box-shadow: 0 0 15px rgba(206,17,38,0.3); }
+        .tabs { display: flex; background: #111; }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; color: #666; font-weight: bold; transition: 0.3s; }
+        .tab.active { color: var(--red); border-bottom: 3px solid var(--red); background: #181818; }
+        
+        .view { display: none; height: calc(100vh - 125px); overflow-y: auto; padding: 15px; }
+        .view.active { display: block; }
+
+        /* المستخدمين */
+        .user-card { background: #121212; padding: 12px; border-radius: 15px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; border: 1px solid #222; }
+        .me-style { border: 1px solid var(--gold); background: #1a1600; }
+        .avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #333; }
+        .verified-badge { width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; }
+
+        /* الشات */
+        #chat-window { display: none; position: fixed; inset: 0; background: #000; z-index: 80000; flex-direction: column; }
+        #chat-msgs { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 75%; padding: 12px 16px; border-radius: 20px; font-size: 15px; }
+        .msg.me { align-self: flex-start; background: var(--red); color: white; border-bottom-left-radius: 2px; }
+        .msg.them { align-self: flex-end; background: #2a2a2a; color: white; border-bottom-right-radius: 2px; }
+
+        /* الستوري المطور */
+        .s-circle { width: 65px; height: 65px; border-radius: 50%; border: 2px solid var(--red); padding: 2px; cursor: pointer; }
+        #story-viewer { display: none; position: fixed; inset: 0; background: #000; z-index: 110000; }
+        .s-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; }
+        .s-progress { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; gap: 5px; }
+        .p-bar { flex: 1; height: 3px; background: #444; border-radius: 10px; overflow: hidden; }
+        .p-fill { height: 100%; background: #fff; width: 0%; }
+
+        /* الأدمن الصارم */
+        #admin-panel { display: none; position: fixed; inset: 0; background: #000; z-index: 99999; padding: 20px; overflow-y: auto; border: 3px solid var(--red); }
+        .adm-box { background: #111; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; }
+        button, input, textarea, select { width: 100%; padding: 12px; margin: 5px 0; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-red { background: var(--red); color: white; }
+        .btn-blue { background: var(--fb-blue); color: white; }
+
+        /* التنبيهات */
+        #mega-alert, #maint-screen { display: none; position: fixed; inset: 0; z-index: 300000; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
+        #mega-alert { background: rgba(206, 17, 38, 0.98); }
+    </style>
+</head>
+<body>
+
+    <template id="fb-icon">
+        <svg class="verified-badge" viewBox="0 0 24 24" fill="#1877F2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5.41 8.41l-6 6c-.38.38-.89.59-1.41.59s-1.03-.21-1.41-.59l-2-2c-.78-.78-.78-2.05 0-2.83.78-.78 2.05-.78 2.83 0L10 12.17l4.59-4.59c.78-.78 2.05-.78 2.83 0 .78.78.78 2.05 0 2.83z"/></svg>
+    </template>
+
+    <div id="mega-alert"><h1>📢 إعلان ملكي</h1><p id="alert-msg" style="font-size:20px"></p><button class="btn-blue" onclick="confirmAlert()">فهمت</button></div>
+    <div id="maint-screen" style="background:#000"><h1>⚠️ صيانة مؤقتة</h1><p id="maint-msg" style="color:var(--red)"></p></div>
+
+    <div class="header">
+        <div onclick="openAdm()" style="font-size:24px; font-weight:900; color:var(--red); cursor:pointer">3MR EMPIRE</div>
+        <div id="myIdDisplay" style="color:var(--gold); font-size:12px">ID: --</div>
+        <div onclick="logout()">🚪</div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="nav(this,'v1')">المتصلون</div>
+        <div class="tab" onclick="nav(this,'v2')">الستوري</div>
+        <div class="tab" onclick="nav(this,'v3')">الحساب</div>
+    </div>
+
+    <div id="v1" class="view active"><div id="uList"></div></div>
+
+    <div id="v2" class="view">
+        <div style="display:flex; gap:10px; margin-bottom:20px">
+            <button class="btn-blue" onclick="addStory('text')">نص 📝</button>
+            <button class="btn-blue" onclick="addStory('image')">صورة 🖼️</button>
+            <button class="btn-blue" onclick="addStory('video')">فيديو 🎥</button>
+        </div>
+        <div id="sBox" style="display:flex; gap:12px; overflow-x:auto; padding-bottom:10px"></div>
+    </div>
+
+    <div id="v3" class="view" style="text-align:center">
+        <img id="myPic" src="" class="avatar" style="width:110px; height:110px; border:3px solid var(--gold)" onclick="changeAvatar()">
+        <h2 id="myName">--</h2>
+        <button class="btn-blue" onclick="editName()">تغيير الاسم</button>
+        <p style="color:#666; margin-top:20px">السيادة الكاملة للإمبراطور V23</p>
+    </div>
+
+    <div id="chat-window">
+        <div class="header">
+            <button onclick="closeChat()" style="background:none; color:white; font-size:20px">←</button>
+            <b id="cTarget">دردشة</b>
+            <span></span>
+        </div>
+        <div id="chat-msgs"></div>
+        <div style="padding:12px; background:#111; display:flex; gap:8px">
+            <input type="text" id="mInput" placeholder="اكتب هنا...">
+            <button class="btn-red" style="width:80px" onclick="sendMessage()">إرسال</button>
+        </div>
+    </div>
+
+    <div id="story-viewer">
+        <div id="sBars" class="s-progress"></div>
+        <div id="sContent" class="s-content"></div>
+        <span onclick="closeStory()" style="position:absolute; top:30px; right:25px; font-size:45px; cursor:pointer">×</span>
+    </div>
+
+    <div id="admin-panel">
+        <h2>لوحة الإمبراطور 👑</h2>
+        <div class="adm-box">
+            <h3>👤 إدارة المستخدمين</h3>
+            <select id="admUsers"></select>
+            <input type="number" id="vTime" placeholder="دقائق التوثيق">
+            <button class="btn-blue" onclick="admAction('v')">توثيق الحساب</button>
+            <button class="btn-red" onclick="admAction('uv')">سحب التوثيق</button>
+        </div>
+        <div class="adm-box">
+            <h3>📢 البث والصيانة</h3>
+            <textarea id="bcInput" placeholder="رسالة البث..."></textarea>
+            <button class="btn-blue" onclick="admAction('bc')">إرسال بث عام</button>
+            <textarea id="mtInput" placeholder="رسالة الصيانة..."></textarea>
+            <button class="btn-red" onclick="admAction('mt')">تفعيل الصيانة</button>
+            <button class="btn-blue" onclick="admAction('umt')">إلغاء الصيانة</button>
+        </div>
+        <div class="adm-box">
+            <h3>🗑️ تنظيف البيانات</h3>
+            <button class="btn-red" onclick="admAction('delChats')">حذف كل الشات</button>
+            <button class="btn-red" onclick="admAction('delStories')">حذف كل الستوري</button>
+        </div>
+        <button class="btn-red" onclick="document.getElementById('admin-panel').style.display='none'">إغلاق</button>
+    </div>
+
+    <script>
+        const DB = "https://amr3j-97309-default-rtdb.firebaseio.com/";
+        let me = JSON.parse(localStorage.getItem('3mr_user')), curRoom = null, chatInt = null, sTimer = null;
+        const fbIcon = document.getElementById('fb-icon').innerHTML;
+
+        if(!me) {
+            const n = prompt("الاسم:"), p = prompt("الموبايل:");
+            if(n && p) {
+                me = { n, id: (p==="01107545181"?"3mr-boss":"ID-"+Math.floor(1000+Math.random()*9000)), pic: "https://via.placeholder.com/100", verified: (p==="01107545181") };
+                localStorage.setItem('3mr_user', JSON.stringify(me));
+                fetch(`${DB}users/${me.id}.json`, { method:'PUT', body: JSON.stringify(me) });
+            }
+        }
+
+        async function sync() {
+            if(!me) return;
+            fetch(`${DB}users/${me.id}/last.json`, { method:'PUT', body: Date.now() });
+
+            const res = await fetch(`${DB}.json`);
+            const data = await res.json(); if(!data) return;
+
+            // صيانة وبث
+            if(data.settings?.maint && me.id!=="3mr-boss") {
+                document.getElementById('maint-screen').style.display='flex';
+                document.getElementById('maint-msg').innerText = data.settings.maint_msg; return;
+            } else { document.getElementById('maint-screen').style.display='none'; }
+
+            if(data.settings?.alert && localStorage.getItem('alert_'+data.settings.alert_id) !== 'done') {
+                document.getElementById('mega-alert').style.display='flex';
+                document.getElementById('alert-msg').innerText = data.settings.alert;
+                window.lastAlertId = data.settings.alert_id;
+            }
+
+            // مستخدمين
+            const uL = document.getElementById('uList'), aS = document.getElementById('admUsers'), now = Date.now();
+            let html = ""; aS.innerHTML = "";
+            const users = Object.values(data.users || {}).sort((a,b)=> (b.id===me.id)-(a.id===me.id));
+            users.forEach(u => {
+                if(now - u.last < 30000) {
+                    const isV = (u.vUntil && now < u.vUntil) || u.verified;
+                    html += `<div class="user-card ${u.id===me.id?'me-style':''}">
+                        <div style="display:flex; align-items:center"><img src="${u.pic}" class="avatar">
+                        <div style="margin-right:12px"><b>${u.n} ${isV?fbIcon:''}</b><br><small>${u.id===me.id?'الإمبراطور':'نشط'}</small></div></div>
+                        ${u.id!==me.id ? `<button class="btn-blue" style="width:80px" onclick="openChat('${u.id}','${u.n}')">دردشة</button>` : ''}</div>`;
+                    aS.innerHTML += `<option value="${u.id}">${u.n}</option>`;
+                }
+            });
+            uL.innerHTML = html;
+
+            // ستوري
+            const sBox = document.getElementById('sBox'); sBox.innerHTML = "";
+            const groups = {};
+            Object.values(data.stories || {}).forEach(s => {
+                if(now - s.t < 86400000) { if(!groups[s.uid]) groups[s.uid] = []; groups[s.uid].push(s); }
+            });
+            Object.values(groups).forEach(list => {
+                sBox.innerHTML += `<div onclick='viewStory(${JSON.stringify(list)})' style="text-align:center"><img src="${list[0].upic}" class="s-circle"><br><small>${list[0].un}</small></div>`;
+            });
+
+            document.getElementById('myPic').src = me.pic; document.getElementById('myName').innerText = me.n;
+            document.getElementById('myIdDisplay').innerText = "ID: " + me.id;
+        }
+
+        // --- الشات ---
+        function openChat(id, name) {
+            curRoom = [me.id, id].sort().join("_");
+            document.getElementById('cTarget').innerText = name;
+            document.getElementById('chat-window').style.display='flex';
+            loadM();
+            if(chatInt) clearInterval(chatInt); chatInt = setInterval(loadM, 2000);
+        }
+        async function sendMessage() {
+            const inp = document.getElementById('mInput'); if(!inp.value) return;
+            await fetch(`${DB}EMPIRE_CHATS/${curRoom}.json`, { method:'POST', body: JSON.stringify({sid:me.id, txt:inp.value, t:Date.now()}) });
+            inp.value = ""; loadM();
+        }
+        async function loadM() {
+            if(!curRoom) return;
+            const res = await fetch(`${DB}EMPIRE_CHATS/${curRoom}.json`);
+            const data = await res.json();
+            const box = document.getElementById('chat-msgs'); box.innerHTML = "";
+            if(data) Object.values(data).forEach(m => box.innerHTML += `<div class="msg ${m.sid===me.id?'me':'them'}">${m.txt}</div>`);
+            box.scrollTop = box.scrollHeight;
+        }
+        function closeChat() { document.getElementById('chat-window').style.display='none'; clearInterval(chatInt); curRoom=null; }
+
+        // --- الستوري المطور ---
+        async function addStory(type) {
+            if(type==='text') {
+                const txt = prompt("اكتب النص:"); if(!txt) return;
+                await fetch(`${DB}stories.json`, { method:'POST', body: JSON.stringify({uid:me.id, un:me.n, upic:me.pic, type:'text', val:txt, t:Date.now()}) });
+            } else {
+                const file = document.createElement('input'); file.type = 'file'; file.accept = type==='video' ? 'video/*' : 'image/*';
+                file.onchange = e => {
+                    const r = new FileReader();
+                    r.onload = async () => { await fetch(`${DB}stories.json`, { method:'POST', body: JSON.stringify({uid:me.id, un:me.n, upic:me.pic, type, val:r.result, t:Date.now()}) }); alert("تم النشر!"); };
+                    r.readAsDataURL(e.target.files[0]);
+                }; file.click();
+            }
+        }
+
+        function viewStory(list) {
+            let idx = 0; document.getElementById('story-viewer').style.display = 'block';
+            const show = () => {
+                const s = list[idx], box = document.getElementById('sContent'), bars = document.getElementById('sBars');
+                bars.innerHTML = list.map((_,i)=>`<div class="p-bar"><div class="p-fill" id="fill-${i}" style="width:${i<idx?'100%':'0%'}"></div></div>`).join('');
+                if(s.type==='text') box.innerHTML = `<h1 style="font-size:32px; color:var(--gold)">${s.val}</h1>`;
+                else if(s.type==='video') box.innerHTML = `<video src="${s.val}" autoplay style="max-height:100%"></video>`;
+                else box.innerHTML = `<img src="${s.val}" style="max-height:100%">`;
+                
+                let w = 0; clearInterval(sTimer);
+                sTimer = setInterval(() => { w++; document.getElementById(`fill-${idx}`).style.width = w+'%'; if(w>=100) { idx++; if(idx<list.length) show(); else closeStory(); } }, 40);
+            }; show();
+        }
+        function closeStory() { document.getElementById('story-viewer').style.display='none'; clearInterval(sTimer); }
+
+        // --- الأدمن ---
+        async function admAction(t) {
+            const target = document.getElementById('admUsers').value;
+            if(t==='v') await fetch(`${DB}users/${target}.json`, { method:'PATCH', body: JSON.stringify({verified:true, vUntil: Date.now()+(document.getElementById('vTime').value*60000)}) });
+            if(t==='uv') await fetch(`${DB}users/${target}.json`, { method:'PATCH', body: JSON.stringify({verified:false, vUntil:0}) });
+            if(t==='bc') await fetch(`${DB}settings.json`, { method:'PATCH', body: JSON.stringify({alert: document.getElementById('bcInput').value, alert_id: Date.now()}) });
+            if(t==='mt') await fetch(`${DB}settings.json`, { method:'PATCH', body: JSON.stringify({maint: true, maint_msg: document.getElementById('mtInput').value}) });
+            if(t==='umt') await fetch(`${DB}settings.json`, { method:'PATCH', body: JSON.stringify({maint: false}) });
+            if(t==='delChats') { if(confirm("حذف كل الرسايل؟")) await fetch(`${DB}EMPIRE_CHATS.json`, {method:'DELETE'}); }
+            if(t==='delStories') { if(confirm("حذف كل الستوريات؟")) await fetch(`${DB}stories.json`, {method:'DELETE'}); }
+            alert("تم تنفيذ العملية");
+        }
+
+        function confirmAlert() { localStorage.setItem('alert_'+window.lastAlertId, 'done'); document.getElementById('mega-alert').style.display='none'; }
+        function nav(el, id){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.view').forEach(v=>v.classList.remove('active')); el.classList.add('active'); document.getElementById(id).classList.add('active'); }
+        function openAdm() { if(me.id==="3mr-boss" || prompt("الرمز:")==="15102009") document.getElementById('admin-panel').style.display='block'; }
+        function logout() { localStorage.clear(); location.reload(); }
+        async function editName() { const n = prompt("الاسم:"); if(n) { me.n=n; localStorage.setItem('3mr_user', JSON.stringify(me)); await fetch(`${DB}users/${me.id}/n.json`, {method:'PUT', body: JSON.stringify(n)}); } }
+        async function changeAvatar() { const url = prompt("رابط الصورة المباشر:"); if(url) { me.pic=url; localStorage.setItem('3mr_user', JSON.stringify(me)); await fetch(`${DB}users/${me.id}/pic.json`, {method:'PUT', body: JSON.stringify(url)}); } }
+
+        setInterval(sync, 4000);
+    </script>
+</body>
+</html>
